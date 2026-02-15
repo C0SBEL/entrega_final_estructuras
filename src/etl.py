@@ -30,6 +30,7 @@ def transform(df: pl.DataFrame):
     movies = df.select([
         "id",
         "title",
+        "original_title",
         "release_date",
         "vote_average",
         "vote_count",
@@ -37,7 +38,15 @@ def transform(df: pl.DataFrame):
         "runtime",
         "genres",
         "production_companies",
-        "production_countries"
+        "production_countries",
+        "spoken_languages",
+        "original_language",
+        "revenue",
+        "overview",
+        "tagline",
+        "adult",
+        "homepage",
+        "budget"
     ])
 
     # ---------- GENRES ----------
@@ -103,12 +112,33 @@ def transform(df: pl.DataFrame):
         .alias("country_ids")
     ).drop("production_countries")
 
-    return movies, genres, companies, countries
+    # ---------- LANGUAGES ----------
+    languages = (
+        df.select(pl.col("spoken_languages").str.split(", "))
+        .explode("spoken_languages")
+        .drop_nulls()
+        .unique()
+        .rename({"spoken_languages": "name"})
+        .with_row_count("language_id")
+    )
+
+    language_map = dict(zip(languages["name"], languages["language_id"]))
+
+    movies = movies.with_columns(
+        pl.col("spoken_languages")
+        .str.split(", ")
+        .map_elements(
+            lambda x: [language_map[l] for l in x if l in language_map]
+        )
+        .alias("language_ids")
+    ).drop("spoken_languages")
+
+    return movies, genres, companies, countries, languages
 
 
 # ---------------- LOAD ----------------
 
-def load(movies, genres, companies, countries, db):
+def load(movies, genres, companies, countries, languages, db):
 
     print("Loading to MongoDB...")
 
@@ -116,10 +146,12 @@ def load(movies, genres, companies, countries, db):
     db.genres.delete_many({})
     db.production_companies.delete_many({})
     db.production_countries.delete_many({})
+    db.languages.delete_many({})
 
     db.movies.insert_many(movies.to_dicts())
     db.genres.insert_many(genres.to_dicts())
     db.production_companies.insert_many(companies.to_dicts())
     db.production_countries.insert_many(countries.to_dicts())
+    db.languages.insert_many(languages.to_dicts())
 
     print("Data loaded correctly.")

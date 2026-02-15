@@ -1,14 +1,13 @@
 import os
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
-from sqlalchemy.util import generic_repr
 
 
 class MovieDatabase:
 
     def __init__(self, uri=None, db_name=None):
 
-        uri = uri or os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+        uri = uri or os.getenv("MONGO_URI", "mongodb://localhost:54083/")
         db_name = db_name or os.getenv("MONGO_DB", "tmdb_movies_db")
 
         self.client = MongoClient(uri, serverSelectionTimeoutMS=5000)
@@ -16,32 +15,27 @@ class MovieDatabase:
         try:
             self.client.server_info()
         except ServerSelectionTimeoutError as e:
-            raise ConnectionError(f"No es pot connectar a MongoDB: {e}")
+            raise ConnectionError(f"No se puede conectar a MongoDB: {e}")
 
         self.db = self.client[db_name]
 
-        if "movies" not in self.db.list_collection_names():
-            self.db.create_collection("movies")
-
+        # Colecciones
         self.movies = self.db.movies
         self.genres = self.db.genres
         self.production_companies = self.db.production_companies
         self.production_countries = self.db.production_countries
+        self.languages = self.db.languages
 
-        # Índexs útils per consultes
-        self.movies.create_index("title")
-        self.movies.create_index("release_date")
-        self.movies.create_index("genres")
-        self.movies.create_index("vote_average")
-        self.movies.create_index([("genres", 1), ("vote_average", -1)])
-        self.genres.create_index("name")
-        self.production_companies.create_index("name")
-        self.production_countries.create_index("name")
+        # ----------- ÍNDICES mínimos útiles -----------
 
-        self.movies.create_index([
-            ("title", "text"),
-            ("genres", "text")
-        ])
+        # Evitar duplicados de películas por id externo
+        self.movies.create_index("id", unique=True)
+
+        # Dimensiones: evitar duplicados en los ids
+        self.genres.create_index("genre_id", unique=True)
+        self.production_companies.create_index("company_id", unique=True)
+        self.production_countries.create_index("country_id", unique=True)
+        self.languages.create_index("language_id", unique=True)
 
     def insert_movies(self, docs, overwrite=False):
 

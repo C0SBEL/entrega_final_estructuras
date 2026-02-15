@@ -7,7 +7,7 @@ class MovieDatabase:
 
     def __init__(self, uri=None, db_name=None):
 
-        uri = uri or os.getenv("MONGO_URI", "mongodb://localhost:54083/")
+        uri = uri or os.getenv("MONGO_URI", "mongodb://localhost:27017/")
         db_name = db_name or os.getenv("MONGO_DB", "tmdb_movies_db")
 
         self.client = MongoClient(uri, serverSelectionTimeoutMS=5000)

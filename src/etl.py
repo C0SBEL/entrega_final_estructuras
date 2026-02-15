@@ -47,7 +47,7 @@ def transform(df: pl.DataFrame):
         "adult",
         "homepage",
         "budget"
-    ])
+    ]).unique(subset=["id"])
 
     # ---------- GENRES ----------
     genres = (
@@ -148,10 +148,15 @@ def load(movies, genres, companies, countries, languages, db):
     db.production_countries.delete_many({})
     db.languages.delete_many({})
 
+    print(f"Inserting {len(movies)} movies...")
     db.movies.insert_many(movies.to_dicts())
+    print(f"Inserting {len(genres)} genres...")
     db.genres.insert_many(genres.to_dicts())
+    print(f"Inserting {len(companies)} companies...")
     db.production_companies.insert_many(companies.to_dicts())
+    print(f"Inserting {len(countries)} countries...")
     db.production_countries.insert_many(countries.to_dicts())
+    print(f"Inserting {len(languages)} languages...")
     db.languages.insert_many(languages.to_dicts())
 
     print("Data loaded correctly.")

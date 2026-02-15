@@ -6,7 +6,7 @@ def run_pipeline():
 
     db = MovieDatabase()
 
-    df_raw = extract(limit=10000)
+    df_raw = extract()
     movies, genres, companies, countries, languages = transform(df_raw)
 
     load(movies, genres, companies, countries, languages, db)
